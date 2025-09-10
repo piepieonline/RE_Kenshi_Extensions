@@ -1,0 +1,4 @@
+[submodule "KenshiLib"]
+	path = KenshiLib
+	url = https://github.com/piepieonline/KenshiLib.git
+	branch = shims

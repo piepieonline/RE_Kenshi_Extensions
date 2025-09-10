@@ -1,0 +1,38 @@
+﻿{
+    "version": 3,
+    "configurePresets": [
+      {
+        "name": "default",
+        "generator": "Visual Studio 17 2022",
+        "architecture": "x64",
+        "binaryDir": "${sourceDir}/build",
+        "cacheVariables": {
+          "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
+          "CMAKE_CXX_STANDARD": "17",
+          "KENSHI_DIR": null
+        }
+      },
+      {
+        "name": "x64-debug-base",
+        "displayName": "x64 Debug",
+        "inherits": "default",
+        "architecture": {
+          "value": "x64",
+          "strategy": "external"
+        },
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "KENSHI_DIR": null
+        }
+      },
+      {
+          "name": "x64-release-base",
+          "displayName": "x64 Release",
+          "inherits": "x64-debug-base",
+	      "cacheVariables": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "KENSHI_DIR": null
+          }
+      }
+    ]
+}
