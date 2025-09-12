@@ -1,16 +1,26 @@
-﻿cmake_minimum_required(VERSION 3.15)
-project(DebugMod LANGUAGES CXX)
+﻿project(DebugMod LANGUAGES CXX)
 
-add_library(DebugMod SHARED "./Src/DllMain.cpp")
+file(GLOB_RECURSE DEBUGMOD_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Include/*.h"
+)
+
+add_library(DebugMod SHARED ${DEBUGMOD_SOURCES})
 
 # Find MinHook installed by vcpkg
 # find_package(minhook CONFIG REQUIRED)
-# target_link_libraries(DebugMod PRIVATE minhook::minhook)
+
+find_package(Lua REQUIRED)
+find_path(LUABRIDGE_INCLUDE_DIRS "LuaBridge/Array.h")
+target_include_directories(DebugMod PRIVATE ${LUABRIDGE_INCLUDE_DIRS})
 
 # Enable C++17
 target_compile_features(DebugMod PRIVATE cxx_std_17)
 
-target_link_libraries(DebugMod PRIVATE KenshiLib EscortLib)
+target_link_libraries(DebugMod PRIVATE KenshiLib EscortLib ${LUA_LIBRARIES})
+# target_link_libraries(DebugMod PRIVATE minhook::minhook)
+
+target_include_directories(DebugMod PRIVATE ${LUA_INCLUDE_DIR})
 
 # Optional: specify output directory
 set_target_properties(DebugMod PROPERTIES
