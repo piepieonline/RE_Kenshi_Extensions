@@ -171,15 +171,11 @@ void dllmain()
 
 
     validateOffset("PlayerInterface::selectBox", offsetof(Kenshi::PlayerInterface, selectBox), 0xA8);
-    validateOffset("PlayerInterface::moveMarker", offsetof(Kenshi::PlayerInterface, moveMarker), 0xE8);
-    validateOffset("PlayerInterface::selectedCharacter", offsetof(Kenshi::PlayerInterface, selectedCharacter), 0xF0);
-    validateOffset("PlayerInterface::townsActive", offsetof(Kenshi::PlayerInterface, townsActive), 0x160);
     validateOffset("PlayerInterface::mRightDown", offsetof(Kenshi::PlayerInterface, mRightDown), 0x2F4);
 
     validateOffset("Character::naturalWeapon", offsetof(Kenshi::Character, naturalWeapon), 0x6D0);
 
     validateOffset("SelectionBox::startPos", offsetof(Kenshi::SelectionBox, startPos), 0x00);
-    validateOffset("SelectionBox::volume", offsetof(Kenshi::SelectionBox, volume), 0x08);
     validateOffset("SelectionBox::widget", offsetof(Kenshi::SelectionBox, widget), 0x30);
 
     const char* purchase_item_pattern = "\x8B\x81\x88\x00\x00\x00\x3B\xC2\x7D\x07\x85\xD2\x78\x03\x32\xC0";

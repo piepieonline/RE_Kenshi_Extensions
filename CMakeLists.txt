@@ -23,7 +23,8 @@ add_subdirectory("KenshiLib")
 add_subdirectory("EscortLib")
 
 # Include sub-projects.
-add_subdirectory ("DebugMod")
+add_subdirectory ("ModLoader")
+# add_subdirectory ("DebugMod")
 
 if (WIN32)
     # Define debugger command

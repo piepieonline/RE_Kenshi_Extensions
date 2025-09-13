@@ -34,7 +34,7 @@ if(KENSHI_DIR)
     add_custom_command(TARGET DebugMod POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:DebugMod>
-            "${KENSHI_DIR}/modPlugins/$<TARGET_FILE_NAME:DebugMod>"
+            "${KENSHI_DIR}/modPlugins/DebugMod/$<TARGET_FILE_NAME:DebugMod>"
     )
 else()
     message(WARNING "KENSHI_DIR is not set. Built DLL will not be copied automatically.")
