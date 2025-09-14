@@ -33,11 +33,17 @@ ModLoader::ModLoader()
     freopen_s(&fDummy, "CONIN$", "r", stdin);
 
     Kenshi::BinaryVersion gameVersion = Kenshi::GetKenshiVersion();
+
+    if(gameVersion.GetPlatform() == Kenshi::BinaryVersion::KenshiPlatform::UNKNOWN) {
+        Log("[ModLoader] Unknown Kenshi version, mod loader will not run.");
+        return;
+    }
+
     uintptr_t moduleBase;
     size_t moduleSize;
     GetModuleCodeRegion(gameVersion.GetBinaryName().c_str(), &moduleBase, &moduleSize);
 
-    Log("[ModLoader] Initialized. PID: %d. Module Base: 0x%p. GameWorld address: 0x%p", GetCurrentProcessId(), moduleBase, &Kenshi::GetGameWorld());
+    Log("[ModLoader] Initialized on game version %s. PID: %d. Module Base: 0x%p. GameWorld address: 0x%p", gameVersion.GetVersion().c_str(), GetCurrentProcessId(), moduleBase, &Kenshi::GetGameWorld());
 
     ValidateOffsets();
 
@@ -86,6 +92,7 @@ void ModLoader::Log(const char* format, ...) {
 }
 
 void ModLoader::ValidateOffsets() {
+#if _MSC_VER
     ValidateOffset("GameDataContainer::gamedataID", offsetof(Kenshi::GameDataContainer, gamedataID), 0x50);
     ValidateOffset("GameWorld::player", offsetof(Kenshi::GameWorld, player), 0x580);
 
@@ -99,6 +106,7 @@ void ModLoader::ValidateOffsets() {
     ValidateOffset("SelectionBox::widget", offsetof(Kenshi::SelectionBox, widget), 0x30);
 
     ValidateOffset("Ownerships::money", offsetof(Kenshi::Ownerships, money), 0x88);
+#endif
 }
 
 void ModLoader::ValidateOffset(const char* name, size_t actual, size_t expected) {

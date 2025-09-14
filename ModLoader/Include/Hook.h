@@ -95,19 +95,6 @@ public:
 		return 0;
 	}
 
-	TReturn HookFunction(TArgs... args)
-	{
-		std::cout << "[Hook] " << hookName << " called." << std::endl;
-
-		using traits = function_traits<TReturn(TArgs...)>;
-		if constexpr (std::is_same_v<typename traits::return_type, void>) {
-			reference.originalFunction(args...);
-		}
-		else {
-			return reference.originalFunction(args...);
-		}
-	}
-
 	void CreateHook()
 	{
 		if (moduleBase == 0)
