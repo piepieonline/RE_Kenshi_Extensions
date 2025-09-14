@@ -47,6 +47,9 @@ void LoadedMod::CreateLuaState()
     luabridge::getGlobalNamespace(luaState)
         .beginNamespace("Kenshi")
 
+        .beginClass<Kenshi::Item>("Item")
+        .endClass()
+
         .beginClass<Kenshi::Ownerships>("Ownerships")
         .addProperty("money", &Kenshi::Ownerships::money, false)
         .endClass()

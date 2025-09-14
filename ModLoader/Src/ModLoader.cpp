@@ -71,11 +71,11 @@ ModLoader::ModLoader()
         {
             hook->CreateHook();
 		    HookMap[hook->hookName] = hook;
-            Log("[ModLoader] Hook %s installed at offset 0x%p", hook->hookName.c_str(), (void*)hook->reference.offset);
+            Log("[ModLoader] INSTALLED: Hook %s at 0x%p (Offset 0x%p). Original function placed at 0x%p.", hook->hookName.c_str(), moduleBase + hook->reference.offset, hook->reference.offset, hook->reference.originalFunction);
         }
         else
         {
-            Log("[ModLoader] Hook %s skipped as unused", hook->hookName.c_str());
+            Log("[ModLoader] SKIPPED: Hook %s as unused", hook->hookName.c_str());
         }
 	}
 }

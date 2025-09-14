@@ -40,6 +40,16 @@ private:
 			{
 				return HookFunction<Kenshi::Inventory*, Kenshi::Inventory*, uintptr_t>(ModLoader::HookMap["Inventory_ctr"], _this, owner);
 			}
+		),
+		new Hook<int32_t, Kenshi::Item*, int32_t>(
+			"Item_getValue_ukn",
+			6,
+			"\x48\x89\x5c\x24\x08\x48\x89\x74\x24\x10\x57\x48\x83\xec\x30\x48\x8b\x01\x0f\xb6\xf2\x48\x8b\xd9\xff\x90\xb8\x02\x00\x00",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			+[](Kenshi::Item* _this, int32_t quantity) -> int32_t
+			{
+				return HookFunction<int32_t, Kenshi::Item*, int32_t>(ModLoader::HookMap["Item_getValue_ukn"], _this, quantity);
+			}
 		)
 	};
 
@@ -49,6 +59,22 @@ private:
 
 	void ValidateOffsets();
 	void ValidateOffset(const char* name, size_t actual, size_t expected);
+
+	template<typename T>
+	struct ReturnHolder {
+		T value;
+		bool hasValue = false;
+
+		void set(T v) { value = v; hasValue = true; }
+		T get() const { return value; }
+	};
+
+	template<>
+	struct ReturnHolder<void> {
+		bool hasValue = false;
+		void set() const {}
+		void get() const {}
+	};
 
 	template <size_t Index = 0, typename Tuple>
 	static void AssignArgumentOverrides(const luabridge::LuaRef& ret, Tuple& t) {
@@ -67,8 +93,7 @@ private:
 		Log("[Hook] %s called.", hook->hookName.c_str());
 
 		bool continueOriginal = true;
-		bool hasReturnValue = false;
-		void* returnValue;
+		ReturnHolder<TReturn> returnValue;
 
 		lua_State* luaState = ModLoader::Instance().loadedMods[0]->luaState; // TODO: Support multiple mods
 		luabridge::LuaRef luaCallback = luabridge::getGlobal(luaState, hook->hookName.c_str());
@@ -95,8 +120,8 @@ private:
 					if constexpr (!std::is_same_v<TReturn, void>) {
 						if (!ret["returnValue"].isNil())
 						{
-							hasReturnValue = true;
-							returnValue = ret["returnValue"].cast<TReturn>();
+							returnValue = ReturnHolder<TReturn>();
+							returnValue.set(ret["returnValue"].cast<TReturn>());
 						}
 					}
 				}
@@ -121,24 +146,32 @@ private:
 		else
 		{
 			// TODO: Log case that we don't have a return value but have been told to not call original
-			if (continueOriginal || !hasReturnValue)
+			if (continueOriginal || !returnValue.hasValue)
 			{
-				if (hasReturnValue)
+				if (returnValue.hasValue)
 				{
-					Log("[Hook] %s calling original but overwriting return value.", hook->hookName.c_str());
-					hook->reference.GetOriginal<TReturn(TArgs...)>()(args...);
-					return *(TReturn*)returnValue;
+					Log("[Hook] %s calling original but overwriting the return value.", hook->hookName.c_str());
+					hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...);
+					// TReturn newReturnValue = ;
+					// std::cout << "Return value was: " << realReturnValue << " and is now " << newReturnValue << std::endl;
+					return returnValue.get(); // This crashes
 				}
 				else
 				{
-					Log("[Hook] %s calling original and using return value.", hook->hookName.c_str());
-					return hook->reference.GetOriginal<TReturn(TArgs...)>()(args...);
+					Log("[Hook] %s calling original and using the original return value.", hook->hookName.c_str());
+					if (!continueOriginal)
+					{
+						Log("[Hook] WARNING: %s tried to skip but didn't provide a return value.", hook->hookName.c_str());
+					}
+
+					return hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...);
 				}
 			}
 			else
 			{
-				Log("[Hook] %s skipping original and using return value.", hook->hookName.c_str());
-				return *(TReturn*)returnValue;
+
+				Log("[Hook] %s skipping original and overwriting the return value.", hook->hookName.c_str());
+				return returnValue.get(); // This works
 			}
 		}
 	}
