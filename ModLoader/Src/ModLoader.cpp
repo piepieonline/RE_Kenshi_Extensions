@@ -106,6 +106,7 @@ void ModLoader::ValidateOffsets() {
     ValidateOffset("SelectionBox::widget", offsetof(Kenshi::SelectionBox, widget), 0x30);
 
     ValidateOffset("Ownerships::money", offsetof(Kenshi::Ownerships, money), 0x88);
+    ValidateOffset("MyGUI::Widget::mName", offsetof(MyGUI::Widget, mName), 0x428);
 #endif
 }
 
