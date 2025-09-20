@@ -1,10 +1,13 @@
-
 #include <vector>
+
+#include "../Include/KenshiLibHelper.h"
+#include <MyGUI_RotatingSkin.h>
 
 #include <lua.hpp>
 #include "LuaBridge/LuaBridge.h"
 
 #include <_IncompleteTypes.h>
+#include <kenshi/Item.h>
 
 #include "Hook.h"
 #include "LoadedMod.h"
@@ -16,7 +19,11 @@ public:
 
 	static void Log(const char* format, ...);
 
+	void ReloadMods();
+
 private:
+	void ClearLog();
+
 	std::vector<LoadedMod*> loadedMods;
 
 	static std::map<std::string, HookBase*> HookMap;
@@ -24,7 +31,6 @@ private:
 	{
 		new Hook<void, Kenshi::Ownerships*, int32_t>(
 			"Ownerships_addMoney",
-			6,
 			"\x8B\x81\x88\x00\x00\x00\x3B\xC2\x7D\x07\x85\xD2\x78\x03\x32\xC0",
 			"xxx???xxxxxxxxxx",
 			+[](Kenshi::Ownerships* ownerships, int32_t price) -> void
@@ -34,7 +40,6 @@ private:
 		),
 		new Hook<Kenshi::Inventory*, Kenshi::Inventory*, uintptr_t>(
 			"Inventory_ctr",
-			6,
 			0x74A510,
 			+[](Kenshi::Inventory* _this, uintptr_t owner) -> Kenshi::Inventory*
 			{
@@ -43,14 +48,51 @@ private:
 		),
 		new Hook<int32_t, Kenshi::Item*, int32_t>(
 			"Item_getValue_ukn",
-			6,
 			"\x48\x89\x5c\x24\x08\x48\x89\x74\x24\x10\x57\x48\x83\xec\x30\x48\x8b\x01\x0f\xb6\xf2\x48\x8b\xd9\xff\x90\xb8\x02\x00\x00",
 			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 			+[](Kenshi::Item* _this, int32_t quantity) -> int32_t
 			{
 				return HookFunction<int32_t, Kenshi::Item*, int32_t>(ModLoader::HookMap["Item_getValue_ukn"], _this, quantity);
 			}
+		),
+		new Hook<uintptr_t, uintptr_t, Kenshi::Item*, uintptr_t, MyGUI::Widget*>(
+			"ukn_createDraggableItem",
+			"\x40\x55\x53\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8d\x6c\x24\xe1\x48\x81\xec\xd8\x00\x00\x00\x48\xc7\x45\x87\xfe\xff\xff\xff",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			+[](uintptr_t _this, Kenshi::Item* item, uintptr_t gameData_maybe, MyGUI::Widget* parentWidget) -> uintptr_t
+			{
+				return HookFunction<uintptr_t, uintptr_t, Kenshi::Item*, uintptr_t, MyGUI::Widget*>(ModLoader::HookMap["ukn_createDraggableItem"], _this, item, gameData_maybe, parentWidget);
+			}
+		),
+		new Hook<void, uintptr_t, uint32_t>(
+			"InputHandler_keyDownEvent",
+			"\x40\x53\x48\x83\xec\x30\x44\x8b\xc2\x48\x8b\xd9\x83\xfa\x2a\x74\x05\x83\xfa\x36\x75\x07\xc6\x81\xd9\x00\x00\x00\x01",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			+[](uintptr_t input, uint32_t oisKeyCode) -> void
+			{
+				HookFunction<void, uintptr_t, uint32_t>(ModLoader::HookMap["InputHandler_keyDownEvent"], input, oisKeyCode);
+			}
+		),
+		new Hook<void, uintptr_t, uint32_t>(
+			"InputHandler_keyUpEvent",
+			"\x0f\xb6\x81\xd8\x00\x00\x00\x4c\x8b\xd1\xf6\xd8\x0f\xb6\x81\xd9\x00\x00\x00\x45\x1b\xc9\x41\x81\xe1\x00\x02\x00\x00\xf6\xd8",
+			"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+			+[](uintptr_t input, uint32_t oisKeyCode) -> void
+			{
+				HookFunction<void, uintptr_t, uint32_t>(ModLoader::HookMap["InputHandler_keyUpEvent"], input, oisKeyCode);
+			}
 		)
+			/*
+		new Hook<Kenshi::GUIWindow*, Kenshi::GUIWindow*>(
+			"GUIWindow_ctr",
+			0x6e1f50,
+			+[](Kenshi::GUIWindow* _this) -> Kenshi::GUIWindow*
+			{
+				return HookFunction<Kenshi::GUIWindow*, Kenshi::GUIWindow*>(ModLoader::HookMap["GUIWindow_setTitle"], _this);
+			},
+			true
+		),
+		*/
 	};
 
 	ModLoader();
@@ -87,21 +129,29 @@ private:
 		}
 	}
 
+	typedef const char* (__thiscall* GetNameFn)(void*);
+
 	template <typename TReturn, typename... TArgs>
 	static TReturn HookFunction(HookBase* hook, TArgs... args)
 	{
-		Log("[Hook] %s called.", hook->hookName.c_str());
+		using traits = function_traits<TReturn(TArgs...)>;
+		// Log("[Hook] %s called.", hook->hookName.c_str());
 
 		bool continueOriginal = true;
 		ReturnHolder<TReturn> returnValue;
 
-		lua_State* luaState = ModLoader::Instance().loadedMods[0]->luaState; // TODO: Support multiple mods
-		luabridge::LuaRef luaCallback = luabridge::getGlobal(luaState, hook->hookName.c_str());
+		std::string prefixName = hook->hookName;
+		std::string postfixName = hook->hookName + "_postfix";
 
-		if (luaCallback.isFunction()) {
+
+		lua_State* luaState = ModLoader::Instance().loadedMods[0]->luaState; // TODO: Support multiple mods
+		luabridge::LuaRef luaPrefixCallback = luabridge::getGlobal(luaState, prefixName.c_str());
+		luabridge::LuaRef luaPostfixCallback = luabridge::getGlobal(luaState, postfixName.c_str());
+
+		if (luaPrefixCallback.isFunction()) {
 			try {
 				// Call the lua hook
-				auto ret = luaCallback(args...);
+				auto ret = luaPrefixCallback(args...);
 
 				// If lua returned a table, we might need to do something
 				if (ret.isTable())
@@ -116,6 +166,8 @@ private:
 					if(continueOriginal && ret["continueOriginal"].isBool() && !ret["continueOriginal"].cast<bool>())
 						continueOriginal = false;
 
+					// TODO: Does it crash if we call here without continueoriginal as a variable?
+
 					// If returnValue is set, we will use that as the return value
 					if constexpr (!std::is_same_v<TReturn, void>) {
 						if (!ret["returnValue"].isNil())
@@ -127,52 +179,91 @@ private:
 				}
 			}
 			catch (luabridge::LuaException const& e) {
-				Log("Lua exception: %s\n", e.what());
+				Log("Lua prefix exception: %s\n", e.what());
 			}
 		}
 
-		using traits = function_traits<TReturn(TArgs...)>;
-		if constexpr (std::is_same_v<typename traits::return_type, void>) {
-			if (continueOriginal)
-			{
-				Log("[Hook] %s calling original (void function).", hook->hookName.c_str());
-				hook->reference.GetOriginal<TReturn(TArgs...)>()(args...);
-			}
-			else
-			{
-				Log("[Hook] %s skipping original (void function).", hook->hookName.c_str());
-			}
-		}
-		else
+		if (continueOriginal)
 		{
-			// TODO: Log case that we don't have a return value but have been told to not call original
-			if (continueOriginal || !returnValue.hasValue)
+			if constexpr (std::is_same_v<typename traits::return_type, void>)
 			{
-				if (returnValue.hasValue)
-				{
-					Log("[Hook] %s calling original but overwriting the return value.", hook->hookName.c_str());
-					hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...);
-					// TReturn newReturnValue = ;
-					// std::cout << "Return value was: " << realReturnValue << " and is now " << newReturnValue << std::endl;
-					return returnValue.get(); // This crashes
-				}
-				else
-				{
-					Log("[Hook] %s calling original and using the original return value.", hook->hookName.c_str());
-					if (!continueOriginal)
-					{
-						Log("[Hook] WARNING: %s tried to skip but didn't provide a return value.", hook->hookName.c_str());
-					}
-
-					return hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...);
-				}
+				hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...);
 			}
 			else
 			{
-
-				Log("[Hook] %s skipping original and overwriting the return value.", hook->hookName.c_str());
-				return returnValue.get(); // This works
+				if(!returnValue.hasValue)
+					returnValue.set(hook->reference.GetOriginal<TReturn(TArgs...)>()(std::forward<TArgs>(args)...));
 			}
+		}
+
+		// Postfix is simpler, only the return value can change
+		if (luaPostfixCallback.isFunction()) {
+			try {
+				// Call the lua hook
+				auto ret = luaPostfixCallback(args...);
+
+				// If lua returned a table, we might need to do something
+				if (ret.isTable())
+				{
+					// If returnValue is set, we will use that as the return value
+					if constexpr (!std::is_same_v<TReturn, void>) {
+						if (!ret["returnValue"].isNil())
+						{
+							returnValue = ReturnHolder<TReturn>();
+							returnValue.set(ret["returnValue"].cast<TReturn>());
+						}
+					}
+				}
+			}
+			catch (luabridge::LuaException const& e) {
+				Log("Lua postfix exception: %s\n", e.what());
+			}
+		}
+
+		using FirstT = std::decay_t<std::tuple_element_t<0, std::tuple<TArgs...>>>;
+		using SecondT = std::decay_t<std::tuple_element_t<1, std::tuple<TArgs...>>>;
+		auto first = std::get<0>(std::forward_as_tuple(args...));
+		auto second = std::get<1>(std::forward_as_tuple(args...));
+
+		
+		if constexpr (std::is_same_v<SecondT, Kenshi::Item*>)
+		{
+			auto i = reinterpret_cast<Kenshi::Item*>(second);
+			/*
+			int index = 22; // vtable slot index
+
+			// Declare function signature
+			using MethodType = int(__fastcall*)(void* thisPtr);
+
+			// Get vtable
+			void** vtable = *(void***)second;
+
+			// Fetch function pointer
+			auto func = reinterpret_cast<MethodType>(vtable[index]);
+
+			// Call it
+			std::cout << "ID: " << func(second) << std::endl;
+			*/
+		}
+
+		// TODO: Temp mod hot reload
+		if constexpr (std::is_same_v<SecondT, uint32_t>)
+		{
+			if (prefixName == "InputHandler_keyDownEvent")
+			{
+				if (second == OIS::KC_P)
+				{
+					Instance().ReloadMods();
+					ModLoader::Log("[ModLoader] Mods Reloaded");
+				}
+			}
+		}
+
+		// End todo
+
+		if constexpr (!std::is_same_v<typename traits::return_type, void>)
+		{
+			return returnValue.get();
 		}
 	}
 };

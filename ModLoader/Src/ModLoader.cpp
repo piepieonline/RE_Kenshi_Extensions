@@ -5,8 +5,6 @@
 #include <lua.hpp>
 #include "LuaBridge/LuaBridge.h"
 
-#include <Escort.h>
-
 #include <core/Scanner.h>
 #include <kenshi/Kenshi.h>
 #include <kenshi/GameWorld.h>
@@ -33,6 +31,8 @@ ModLoader::ModLoader()
     freopen_s(&fDummy, "CONIN$", "r", stdin);
 
     Kenshi::BinaryVersion gameVersion = Kenshi::GetKenshiVersion();
+
+    ClearLog();
 
     if(gameVersion.GetPlatform() == Kenshi::BinaryVersion::KenshiPlatform::UNKNOWN) {
         Log("[ModLoader] Unknown Kenshi version, mod loader will not run.");
@@ -78,6 +78,10 @@ ModLoader::ModLoader()
             Log("[ModLoader] SKIPPED: Hook %s as unused", hook->hookName.c_str());
         }
 	}
+
+    // TODO: Needs to be on a new thread?
+    // KenshiLib_Wrappers::MyGUI_Helpers::FindWidgetRecursive("VersionText", true);
+    // Log("[ModLoader] Main menu loaded.");
 }
 
 void ModLoader::Log(const char* format, ...) {
@@ -89,6 +93,27 @@ void ModLoader::Log(const char* format, ...) {
     va_end(args);
 
     std::cout << buffer << std::endl;
+
+    std::ofstream logFile("ModLoader.log", std::ios::app);
+
+    if (logFile.is_open()) {
+        logFile << buffer << std::endl;
+    }
+    
+    logFile.close();
+}
+
+void ModLoader::ReloadMods()
+{
+    for (auto mod : loadedMods)
+    {
+        mod->ReloadLuaFile();
+    }
+}
+
+void ModLoader::ClearLog() {
+    std::ofstream logFile("ModLoader.log", std::ios::trunc);
+    logFile.close();
 }
 
 void ModLoader::ValidateOffsets() {
@@ -106,6 +131,12 @@ void ModLoader::ValidateOffsets() {
     ValidateOffset("SelectionBox::widget", offsetof(Kenshi::SelectionBox, widget), 0x30);
 
     ValidateOffset("Ownerships::money", offsetof(Kenshi::Ownerships, money), 0x88);
+
+    ValidateOffset("wraps::BaseLayout::widget", offsetof(Kenshi::wraps::BaseLayout, widget), 0x08);
+    ValidateOffset("wraps::BaseLayout::prefix", offsetof(Kenshi::wraps::BaseLayout, prefix), 0x10);
+
+    ValidateOffset("InventoryIcon::inventoryItem", offsetof(Kenshi::InventoryIcon, inventoryItem), 0xA0);
+
     ValidateOffset("MyGUI::Widget::mName", offsetof(MyGUI::Widget, mName), 0x428);
 #endif
 }

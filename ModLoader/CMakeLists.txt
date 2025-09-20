@@ -9,7 +9,7 @@ file(GLOB_RECURSE ModLoader_SOURCES
 add_library(ModLoader SHARED ${ModLoader_SOURCES})
 
 # Find MinHook installed by vcpkg
-# find_package(minhook CONFIG REQUIRED)
+find_package(minhook CONFIG REQUIRED)
 
 find_package(Lua REQUIRED)
 find_path(LUABRIDGE_INCLUDE_DIRS "LuaBridge/Array.h")
@@ -18,14 +18,14 @@ target_include_directories(ModLoader PRIVATE ${LUABRIDGE_INCLUDE_DIRS})
 # Enable C++17
 target_compile_features(ModLoader PRIVATE cxx_std_17)
 
-target_link_libraries(ModLoader PRIVATE KenshiLib EscortLib ${LUA_LIBRARIES})
+target_link_libraries(ModLoader PRIVATE KenshiLib ${LUA_LIBRARIES} minhook::minhook)
 # target_link_libraries(ModLoader PRIVATE minhook::minhook)
 
 target_include_directories(ModLoader PRIVATE ${LUA_INCLUDE_DIR})
 
 # Optional: specify output directory
 set_target_properties(ModLoader PROPERTIES
-    OUTPUT_NAME "ModLoader"
+    OUTPUT_NAME "ScriptExtender"
     SUFFIX ".dll"
     WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
@@ -35,8 +35,15 @@ if(KENSHI_DIR)
     add_custom_command(TARGET ModLoader POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:ModLoader>
-            "${KENSHI_DIR}/modPlugins/$<TARGET_FILE_NAME:ModLoader>"
+            "${KENSHI_DIR}/scriptExtensions/$<TARGET_FILE_NAME:ModLoader>"
     )
+
+    add_custom_command(
+    TARGET ModLoader POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        "D:/Game Modding/Kenshi/KenshiLib/x64/Release/KenshiLib.dll"
+        "${KENSHI_DIR}/KenshiLib.dll"
+)
 else()
     message(WARNING "KENSHI_DIR is not set. Built DLL will not be copied automatically.")
 endif()

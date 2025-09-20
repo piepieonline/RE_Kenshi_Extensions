@@ -20,11 +20,18 @@ endif()
 project ("REKenshiExtensions")
 
 add_subdirectory("KenshiLib")
-add_subdirectory("EscortLib")
 
 # Include sub-projects.
 add_subdirectory ("ModLoader")
 # add_subdirectory ("DebugMod")
+
+# Add random other files to an Extras folder in VS
+set(MISC_FILES 
+    README.md
+    vcpkg.json
+)
+source_group("_Repo" FILES ${MISC_FILES})
+add_custom_target(_Repo SOURCES ${MISC_FILES})
 
 if (WIN32)
     # Define debugger command

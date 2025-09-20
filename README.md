@@ -17,6 +17,10 @@ Hooks can:
 * Run `cmake --build --preset local-debug`
 * Run the game. A terminal window should open and contain logs regarding hook installation.
 
+## Lua Scripting
+
+Lua scripts can use any of the hooks defined by declaring a function of the same name. They have access to any of the classes/properties configured in LuaBridgeSetupImplementation.
+
 ## Example Lua Scripts:
 
 ### Double prices (silently)
