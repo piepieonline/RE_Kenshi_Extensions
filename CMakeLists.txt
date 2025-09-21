@@ -25,13 +25,16 @@ add_subdirectory("KenshiLib")
 add_subdirectory ("ModLoader")
 # add_subdirectory ("DebugMod")
 
-# Add random other files to an Extras folder in VS
+# Add random other files to the project in VS
 set(MISC_FILES 
     README.md
     vcpkg.json
 )
-source_group("_Repo" FILES ${MISC_FILES})
-add_custom_target(_Repo SOURCES ${MISC_FILES})
+target_sources(ModLoader PRIVATE ${MISC_FILES})
+
+# TODO: Add a mods project for lua scripts etc?
+# source_group("_Repo" FILES ${MISC_FILES})
+# add_custom_target(_Repo SOURCES ${MISC_FILES})
 
 if (WIN32)
     # Define debugger command
